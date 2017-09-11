@@ -1,6 +1,6 @@
 [submodule "dmtcp"]
 	path = dmtcp
-	url = https://github.com/dmtcp/dmtcp
+	url = https://github.com/gourryinverse/dmtcp
 [submodule "mpitutorial"]
 	path = mpitutorial
-	url = https://github.com/wesleykendall/mpitutorial
+	url = https://github.com/gourryinverse/mpitutorial
