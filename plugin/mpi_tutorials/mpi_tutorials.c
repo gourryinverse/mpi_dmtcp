@@ -2,6 +2,7 @@
 #include <mpich/mpi.h>
 #include "dmtcp.h"
 
+/* hello-world */
 int MPI_Init(int *argc, char ***argv)
 {
   printf("DMTCP: MPI_Init!\n");
@@ -31,6 +32,46 @@ int MPI_Finalize(void)
 	printf("DMTCP: MPI_Finalize\n");
 	return NEXT_FNC(MPI_Finalize)();
 }
+
+/* mpi-send-and-receive: send_recv.c, ping_pong.c, ring.c */
+// MPI_Abort
+// MPI_Send
+// MPI_Recv
+
+/* dynamic-receiving-with-mpi-prob-and-mpi-status: probe.c, check_status.c */
+/* point-to-point-communication-application-random-walk */
+// Structures: 
+//		MPI_Status
+// MPI_Probe
+// MPI_Get_count
+// MPI_Barrier		(check_status.c only)
+
+/* mpi-broadcast-and-collective-communication: my_bcast, compare_bcast.c */
+// nothing new needed for my_bcast.c
+// MPI_Bcast
+
+/* mpi-scatter-gather-and-allgather: avg.c, */
+// MPI_Scatter
+// MPI_Gather
+// MPI_Allgather
+
+/* performing-parallel-rank-with-mpi: random_rank.c, tmpi_rank.c */
+// MPI_Type_size
+
+/* mpi-reduce-and-allreduce: reduce_avg.c, reduce_stddev.c */
+// MPI_Reduce
+// MPI_Allreduce
+
+/* introduction-to-groups-and-communicators: split.c, groups.c  */
+// Structures:
+// 		MPI_Group
+// MPI_Comm_group
+// MPI_Group_incl
+// MPI_Comm_create_group
+// MPI_Group_free
+// MPI_Comm_free
+
+
 
 void dmtcp_event_hook(DmtcpEvent_t event, DmtcpEventData_t *data)
 {

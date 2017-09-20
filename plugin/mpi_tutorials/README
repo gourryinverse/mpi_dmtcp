@@ -1,5 +1,7 @@
 Beginnings of code to support checkpoint/restart of MPI. 
 
+Stubbed out requirements for each stage
+
 We will start with checkpointing simple MPI tutorials.
 
-dmtcp_launch --with-plugin ~/path/to/libdmtcp_mpi_tutorials.so mpirun -n # ~/path/to/tutorial.bin
+dmtcp_launch --with-plugin ~/path/to/libdmtcp_mpi_tutorials.so mpirun -n # ~/path/to/tutorial.bi
