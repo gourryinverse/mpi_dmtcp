@@ -4,3 +4,6 @@
 [submodule "mpitutorial"]
 	path = mpitutorial
 	url = https://github.com/gourryinverse/mpitutorial
+[submodule "mpich"]
+	path = mpich
+	url = https://github.com/gourryinverse/mpich.git
