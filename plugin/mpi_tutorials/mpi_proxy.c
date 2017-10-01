@@ -22,7 +22,7 @@ int serial_printf(char * msg)
 
 void MPIProxy_Return_Answer(int connfd, int answer)
 {
-	printf("Call Returned %08x\n", answer);
+	printf("Returned %08x\n", answer);
 	fflush(stdout);
   write(connfd, &answer, 4);
   return;
@@ -31,13 +31,13 @@ void MPIProxy_Return_Answer(int connfd, int answer)
 void MPIProxy_Init(int connfd)
 {
   // TODO: Get argc and argv
-  serial_printf("PROXY: MPIProxy_Init\n");
+  serial_printf("PROXY: MPI_Init - ");
   MPIProxy_Return_Answer(connfd, MPI_Init(NULL, NULL));
 }
 
 void MPIProxy_Finalize(int connfd)
 {
-  serial_printf("PROXY: MPIProxy_Finalize\n");
+  serial_printf("PROXY: MPI_Finalize - ");
   MPIProxy_Return_Answer(connfd, MPI_Finalize());
 }
 
@@ -53,7 +53,6 @@ void proxy(int connfd)
   {
 		cmd = 0;
     read(connfd, &cmd, 4);
-		printf("COMMAND: %08x\n", cmd);
 		fflush(stdout);
     switch(cmd)
     {
@@ -64,10 +63,11 @@ void proxy(int connfd)
       MPIProxy_Finalize(connfd);
       break;
     case MPIProxy_Cmd_Shutdown_Proxy:
+      serial_printf("PROXY: Shutdown - ");
 			MPIProxy_Return_Answer(connfd, 0);
       goto DONE;
     default:
-      serial_printf("PROXY: Unknown Command\n");
+      serial_printf("PROXY: Unknown Command. Exiting.\n");
 			goto DONE;
       break;
     }
@@ -107,7 +107,6 @@ int main(int argc, char *argv[])
 	while (1)
 	{
 		pid_t pid;
-		serial_printf("waiting for connection\n");
 		connfd = accept(listfd, (struct sockaddr*)NULL, NULL); 
 		
 		pid = fork();

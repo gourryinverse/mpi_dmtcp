@@ -28,12 +28,13 @@ int serial_printf(char * msg)
 int exec_proxy_cmd(int pcmd)
 {
   int answer = 0;
-	serial_printf("WRITING\n");
+	serial_printf("PLUGIN: Sending Proxy Command\n");
   write(sockfd, &pcmd, 4);
-	serial_printf("READING\n");
+	serial_printf("PLUGIN: Receiving Proxy Answer - ");
   if (read(sockfd, &answer, 4) < 0)
-		serial_printf("ERROR READING\n");
-	serial_printf("Answer Received\n");
+		serial_printf("****** ERROR READING FROM SOCKET *****\n");
+	else
+		serial_printf("Answer Received\n");
   return answer;
 }
 
@@ -54,12 +55,12 @@ void init_proxy()
 
   for (i = 0; i < replay_count; i++)
   {
-		serial_printf("Replaying command\n");
+		printf("PLUGIN: Replaying command %08x\n", replay_commands[i]);
     exec_proxy_cmd(replay_commands[i]);
     i++;
   }
 
-  return; // Parent just continues
+  return;
 }
 
 void add_replay_command(int pcmd)
@@ -91,18 +92,10 @@ void dmtcp_event_hook(DmtcpEvent_t event, DmtcpEventData_t *data)
     serial_printf("*** DMTCP_EVENT_INIT\n");
     init_proxy();
     break;
-  case DMTCP_EVENT_PRE_SUSPEND_USER_THREAD:
-    serial_printf("*** DMTCP_EVENT_PRE_SUSPEND_USER_THREAD\n");
-    // TODO
-    break;
-  case DMTCP_EVENT_DRAIN:
-    serial_printf("*** DMTCP_EVENT_DRAIN\n");
-    // TODO
-    break;
   case DMTCP_EVENT_WRITE_CKPT:
+    serial_printf("*** DMTCP_EVENT_WRITE_CKPT\n");
     exec_proxy_cmd(MPIProxy_Cmd_Shutdown_Proxy);
 		close(sockfd);
-    serial_printf("\n*** DMTCP_EVENT_WRITE_CKPT\n");
     break;
   case DMTCP_EVENT_RESTART:
     serial_printf("*** DMTCP_EVENT_RESTART\n");
@@ -114,63 +107,70 @@ void dmtcp_event_hook(DmtcpEvent_t event, DmtcpEventData_t *data)
     break;
   case DMTCP_EVENT_EXIT:
     serial_printf("*** DMTCP_EVENT_EXIT\n");
+    serial_printf("PLUGIN: Close Proxy Connection\n");
     exec_proxy_cmd(MPIProxy_Cmd_Shutdown_Proxy);
 		close(sockfd);
     break;
 
+  case DMTCP_EVENT_PRE_SUSPEND_USER_THREAD:
+    //serial_printf("*** DMTCP_EVENT_PRE_SUSPEND_USER_THREAD\n");
+    break;
+  case DMTCP_EVENT_DRAIN:
+    //serial_printf("*** DMTCP_EVENT_DRAIN\n");
+    break;
   case DMTCP_EVENT_PRE_EXEC:
-    printf("*** DMTCP_EVENT_PRE_EXEC\n");
+    //printf("*** DMTCP_EVENT_PRE_EXEC\n");
     break;
   case DMTCP_EVENT_POST_EXEC:
-    printf("*** DMTCP_EVENT_POST_EXEC\n");
+    //printf("*** DMTCP_EVENT_POST_EXEC\n");
     break;
   case DMTCP_EVENT_ATFORK_PREPARE:
-    printf("*** DMTCP_EVENT_ATFORK_PREPARE\n");
+    //printf("*** DMTCP_EVENT_ATFORK_PREPARE\n");
     break;
   case DMTCP_EVENT_ATFORK_PARENT:
-    printf("*** DMTCP_EVENT_ATFORK_PARENT\n");
+    //printf("*** DMTCP_EVENT_ATFORK_PARENT\n");
     break;
   case DMTCP_EVENT_ATFORK_CHILD:
-    printf("*** DMTCP_EVENT_ATFORK_CHILD\n");
+    //printf("*** DMTCP_EVENT_ATFORK_CHILD\n");
     break;
   case DMTCP_EVENT_WAIT_FOR_SUSPEND_MSG:
-    printf("*** DMTCP_EVENT_WAIT_FOR_SUSPEND_MSG\n");
+    //printf("*** DMTCP_EVENT_WAIT_FOR_SUSPEND_MSG\n");
     break;
   case DMTCP_EVENT_THREADS_SUSPEND:
-    printf("*** DMTCP_EVENT_THREADS_SUSPEND\n");
+    //printf("*** DMTCP_EVENT_THREADS_SUSPEND\n");
     break;
   case DMTCP_EVENT_LEADER_ELECTION:
-    printf("*** DMTCP_EVENT_LEADER_ELECTION\n");
+    //printf("*** DMTCP_EVENT_LEADER_ELECTION\n");
     break;
   case DMTCP_EVENT_REGISTER_NAME_SERVICE_DATA:
-    printf("*** DMTCP_EVENT_REGISTER_NAME_SERVICE_DATA\n");
+    //printf("*** DMTCP_EVENT_REGISTER_NAME_SERVICE_DATA\n");
     break;
   case DMTCP_EVENT_SEND_QUERIES:
-    printf("*** DMTCP_EVENT_SEND_QUERIES\n");
+    //printf("*** DMTCP_EVENT_SEND_QUERIES\n");
     break;
   case DMTCP_EVENT_REFILL:
-    printf("*** DMTCP_EVENT_REFILL\n");
+    //printf("*** DMTCP_EVENT_REFILL\n");
     break;
   case DMTCP_EVENT_THREADS_RESUME:
-    printf("*** DMTCP_EVENT_THREADS_RESUME\n");
+    //printf("*** DMTCP_EVENT_THREADS_RESUME\n");
     break;
   case DMTCP_EVENT_RESUME_USER_THREAD:
-    printf("*** DMTCP_EVENT_RESUME_USER_THREAD\n");
+    //printf("*** DMTCP_EVENT_RESUME_USER_THREAD\n");
     break;
   case DMTCP_EVENT_THREAD_START:
-    printf("*** DMTCP_EVENT_THREAD_START\n");
+    //printf("*** DMTCP_EVENT_THREAD_START\n");
     break;
   case DMTCP_EVENT_THREAD_CREATED:
-    printf("*** DMTCP_EVENT_THREAD_CREATED\n");
+    //printf("*** DMTCP_EVENT_THREAD_CREATED\n");
     break;
   case DMTCP_EVENT_PTHREAD_START:
-    printf("*** DMTCP_EVENT_PTHREAD_START\n");
+    //printf("*** DMTCP_EVENT_PTHREAD_START\n");
     break;
   case DMTCP_EVENT_PTHREAD_EXIT:
-    printf("*** DMTCP_EVENT_PTHREAD_EXIT\n");
+    //printf("*** DMTCP_EVENT_PTHREAD_EXIT\n");
     break;
   case DMTCP_EVENT_PTHREAD_RETURN:
-    printf("*** DMTCP_EVENT_PTHREAD_RETURN\n");
+    //printf("*** DMTCP_EVENT_PTHREAD_RETURN\n");
     break;  
 
 	default:
