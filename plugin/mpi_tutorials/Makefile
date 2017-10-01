@@ -1,5 +1,7 @@
 # To demonstrate, do:  make check    [Checkpoints every 5 seconds]
 
+MPICC = mpicc
+
 # The name will be the same as the current directory name.
 NAME=${shell basename $$PWD}
 
@@ -11,7 +13,7 @@ LIBOBJS = ${NAME}.o
 
 # Modify if your DMTCP_ROOT is located elsewhere.
 ifndef DMTCP_ROOT
-  DMTCP_ROOT=../../..
+  DMTCP_ROOT=../dmtcp
 endif
 DMTCP_INCLUDE=${DMTCP_ROOT}/include
 
@@ -36,7 +38,9 @@ ${LIBNAME}.so: ${LIBOBJS}
 	${LINK} -shared -fPIC -o $@ $^
 
 .c.o:
+	${MPICC} -o mpi_proxy mpi_proxy.c
 	${CC} ${CFLAGS} -c -o $@ $<
+
 .cpp.o:
 	${CXX} ${CXXFLAGS} -c -o $@ $<
 
@@ -45,6 +49,7 @@ tidy:
 
 clean: tidy
 	rm -f ${LIBOBJS} ${LIBNAME}.so
+	rm -f mpi_proxy mpi_proxy.o
 
 distclean: clean
 	rm -f ${LIBNAME}.so *~ .*.swp dmtcp_restart_script*.sh ckpt_*.dmtcp
