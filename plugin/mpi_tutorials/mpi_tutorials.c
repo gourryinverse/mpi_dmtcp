@@ -28,13 +28,13 @@ int serial_printf(char * msg)
 int exec_proxy_cmd(int pcmd)
 {
   int answer = 0;
-	serial_printf("PLUGIN: Sending Proxy Command\n");
+  serial_printf("PLUGIN: Sending Proxy Command\n");
   write(sockfd, &pcmd, 4);
-	serial_printf("PLUGIN: Receiving Proxy Answer - ");
+  serial_printf("PLUGIN: Receiving Proxy Answer - ");
   if (read(sockfd, &answer, 4) < 0)
-		serial_printf("****** ERROR READING FROM SOCKET *****\n");
-	else
-		serial_printf("Answer Received\n");
+    serial_printf("****** ERROR READING FROM SOCKET *****\n");
+  else
+    serial_printf("Answer Received\n");
   return answer;
 }
 
@@ -43,19 +43,19 @@ int exec_proxy_cmd(int pcmd)
 void init_proxy()
 {
   int i = 0;
-	struct sockaddr_in serv_addr;
-	serial_printf("PLUGIN: Initialize Proxy Connection\n");
+  struct sockaddr_in serv_addr;
+  serial_printf("PLUGIN: Initialize Proxy Connection\n");
 
   memset(&serv_addr, '0', sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_port = htons(31337);
   inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr);
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+  sockfd = NEXT_FNC(socket)(AF_INET, SOCK_STREAM, 0);
+  NEXT_FNC(connect)(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
 
   for (i = 0; i < replay_count; i++)
   {
-		printf("PLUGIN: Replaying command %08x\n", replay_commands[i]);
+    printf("PLUGIN: Replaying command %08x\n", replay_commands[i]);
     exec_proxy_cmd(replay_commands[i]);
     i++;
   }
@@ -80,7 +80,7 @@ int MPI_Init(int *argc, char ***argv)
 int MPI_Finalize(void)
 {
   add_replay_command(MPIProxy_Cmd_Finalize);
-	serial_printf("PLUGIN: MPI_Finalize\n");
+  serial_printf("PLUGIN: MPI_Finalize\n");
   return exec_proxy_cmd(MPIProxy_Cmd_Finalize);
 }
 
@@ -95,7 +95,7 @@ void dmtcp_event_hook(DmtcpEvent_t event, DmtcpEventData_t *data)
   case DMTCP_EVENT_WRITE_CKPT:
     serial_printf("*** DMTCP_EVENT_WRITE_CKPT\n");
     exec_proxy_cmd(MPIProxy_Cmd_Shutdown_Proxy);
-		close(sockfd);
+    close(sockfd);
     break;
   case DMTCP_EVENT_RESTART:
     serial_printf("*** DMTCP_EVENT_RESTART\n");
@@ -109,7 +109,7 @@ void dmtcp_event_hook(DmtcpEvent_t event, DmtcpEventData_t *data)
     serial_printf("*** DMTCP_EVENT_EXIT\n");
     serial_printf("PLUGIN: Close Proxy Connection\n");
     exec_proxy_cmd(MPIProxy_Cmd_Shutdown_Proxy);
-		close(sockfd);
+    NEXT_FNC(close)(sockfd);
     break;
 
   case DMTCP_EVENT_PRE_SUSPEND_USER_THREAD:
@@ -173,7 +173,7 @@ void dmtcp_event_hook(DmtcpEvent_t event, DmtcpEventData_t *data)
     //printf("*** DMTCP_EVENT_PTHREAD_RETURN\n");
     break;  
 
-	default:
+  default:
     break;
   }
 

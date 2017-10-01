@@ -22,8 +22,8 @@ int serial_printf(char * msg)
 
 void MPIProxy_Return_Answer(int connfd, int answer)
 {
-	printf("Returned %08x\n", answer);
-	fflush(stdout);
+  printf("Returned %08x\n", answer);
+  fflush(stdout);
   write(connfd, &answer, 4);
   return;
 }
@@ -47,31 +47,31 @@ void proxy(int connfd)
   // TODO get instruction
   // TODO Communication mechanism
   // TODO dispatch
-	int init = 0;
-	int cmd = 0;
+  int init = 0;
+  int cmd = 0;
   while (1)
   {
-		cmd = 0;
+    cmd = 0;
     read(connfd, &cmd, 4);
-		fflush(stdout);
+    fflush(stdout);
     switch(cmd)
     {
     case MPIProxy_Cmd_Init:
-	    MPIProxy_Init(connfd);
+      MPIProxy_Init(connfd);
       break;
     case MPIProxy_Cmd_Finalize:
       MPIProxy_Finalize(connfd);
       break;
     case MPIProxy_Cmd_Shutdown_Proxy:
       serial_printf("PROXY: Shutdown - ");
-			MPIProxy_Return_Answer(connfd, 0);
+      MPIProxy_Return_Answer(connfd, 0);
       goto DONE;
     default:
       serial_printf("PROXY: Unknown Command. Exiting.\n");
-			goto DONE;
+      goto DONE;
       break;
     }
-	}
+  }
 DONE:
   return;
 }
@@ -79,46 +79,46 @@ DONE:
 
 int main(int argc, char *argv[])
 {
-	int connfd = 0;
+  int connfd = 0;
   struct sockaddr_in serv_addr;
   
   memset(&serv_addr, '0', sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
   serv_addr.sin_port = htons(31337);
-	
-	if ((listfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-	{
-		printf("listen failed\n");
-		exit(0);
-	}
-	int reuse = 1;
-	setsockopt(listfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
   
-	if (bind(listfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0)
-	{
-		printf("bind failed\n");
-		close(listfd);
-		exit(0);
-	}
+  if ((listfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+  {
+    printf("listen failed\n");
+    exit(0);
+  }
+  int reuse = 1;
+  setsockopt(listfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
   
-	serial_printf("listening\n");
-	listen(listfd, 1);
-	while (1)
-	{
-		pid_t pid;
-		connfd = accept(listfd, (struct sockaddr*)NULL, NULL); 
-		
-		pid = fork();
-		if (pid == 0)
-		{
-			proxy(connfd);
-			close(connfd);
-			exit(0);
-		}
-	}
-	close(listfd);
-	return 0;
+  if (bind(listfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0)
+  {
+    printf("bind failed\n");
+    close(listfd);
+    exit(0);
+  }
+  
+  serial_printf("listening\n");
+  listen(listfd, 1);
+  while (1)
+  {
+    pid_t pid;
+    connfd = accept(listfd, (struct sockaddr*)NULL, NULL); 
+    
+    pid = fork();
+    if (pid == 0)
+    {
+      proxy(connfd);
+      close(connfd);
+      exit(0);
+    }
+  }
+  close(listfd);
+  return 0;
 }
 
 
