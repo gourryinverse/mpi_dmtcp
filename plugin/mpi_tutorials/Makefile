@@ -9,11 +9,11 @@ NAME=${shell basename $$PWD}
 LIBNAME=libdmtcp_${NAME}
 
 # As you add new files to your plugin library, add the object file names here.
-LIBOBJS = ${NAME}.o
+LIBOBJS = mpi_tutorials.o
 
 # Modify if your DMTCP_ROOT is located elsewhere.
 ifndef DMTCP_ROOT
-  DMTCP_ROOT=../dmtcp
+  DMTCP_ROOT=../../dmtcp
 endif
 DMTCP_INCLUDE=${DMTCP_ROOT}/include
 
@@ -23,7 +23,7 @@ LINK = ${CC}
 
 DEMO_PORT=7781
 
-default: ${LIBNAME}.so
+default: ${LIBNAME}.so mpi_proxy
 
 ${DMTCP_ROOT}/test/dmtcp1: ${DMTCP_ROOT}/test
 	cd ${DMTCP_ROOT}/test; make dmtcp1
@@ -34,12 +34,17 @@ check: ${LIBNAME}.so ${DMTCP_ROOT}/test/dmtcp1
 	${DMTCP_ROOT}/bin/dmtcp_launch --coord-port ${DEMO_PORT} --interval 5 \
 	  --with-plugin $$PWD/${LIBNAME}.so ${DMTCP_ROOT}/test/dmtcp1
 
+mpi_proxy.o: mpi_proxy.c
+	${MPICC} -I${DMTCP_INCLUDE} -c -g3 -O0 -o $@ $<
+
+mpi_proxy: mpi_proxy.o
+	${MPICC} -g3 -O0 -o $@ $<
+
 ${LIBNAME}.so: ${LIBOBJS}
-	${LINK} -shared -fPIC -o $@ $^
+	${LINK} -shared -fPIC -g3 -O0 -o $@ $^
 
 .c.o:
-	${MPICC} -o mpi_proxy mpi_proxy.c
-	${CC} ${CFLAGS} -c -o $@ $<
+	${CC} ${CFLAGS} -g3 -O0 -c -o $@ $<
 
 .cpp.o:
 	${CXX} ${CXXFLAGS} -c -o $@ $<
