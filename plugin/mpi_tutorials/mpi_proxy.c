@@ -9,9 +9,13 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
+#include <assert.h>
 #include <sys/types.h>
+#include <sys/resource.h>
 #include "mpi_proxy.h"
 #include <mpi.h>
+
+#include "protectedfds.h"
 
 int listfd = 0;
 
@@ -53,9 +57,12 @@ void proxy(int connfd)
   while (1)
   {
     cmd = 0;
-    read(connfd, &cmd, 4);
-    fflush(stdout);
-    switch(cmd)
+    int rc = read(connfd, &cmd, sizeof(cmd));
+    if (rc < 0) {
+      perror("PROXY: read");
+      continue;
+    }
+    switch (cmd)
     {
     case MPIProxy_Cmd_Init:
       MPIProxy_Init(connfd);
@@ -68,7 +75,7 @@ void proxy(int connfd)
       MPIProxy_Return_Answer(connfd, 0);
       goto DONE;
     default:
-      serial_printf("PROXY: Unknown Command. Exiting.\n");
+      printf("PROXY: Unknown Command: %d. Exiting.\n", cmd);
       goto DONE;
       break;
     }
@@ -77,21 +84,22 @@ DONE:
   return;
 }
 
-void fork_and_call(int argc, char *argv[])
+void launch_or_restart(pid_t pid, int argc, char *argv[])
 {
-  int pid = fork();
   int i = 0;
   if (pid == 0)
   {
     // child:
-    if (!strcmp(argv[1], "dmtcp_launch"))
+    if (strstr(argv[1], "dmtcp_launch"))
     {
       // go ahead and exec into provided arglist
+      serial_printf("Starting");
       execvp(argv[1], &argv[1]);
     }
-    else if (!strcmp(argv[1], "dmtcp_restart"))
+    else if (strstr(argv[1], "dmtcp_restart"))
     {
-      //execvp("dmtcp_restart", &argv[2]);
+      serial_printf("Restarting");
+      execvp(argv[1], &argv[1]);
     }
     else
     {
@@ -99,55 +107,49 @@ void fork_and_call(int argc, char *argv[])
     }
     exit(1);
   }
-  exit(0);
   return;
+}
+
+// This code is copied from src/util_init.cpp
+// FIXME: Remove this when we integrate with DMTCP
+static void setProtectedFdBase()
+{
+  struct rlimit rlim = {0};
+  char protectedFdBaseBuf[64] = {0};
+  uint32_t base = 0;
+  // Check the max no. of FDs supported for the process
+  if (getrlimit(RLIMIT_NOFILE, &rlim) < 0) {
+    return;
+  }
+  base = rlim.rlim_cur - (PROTECTED_FD_END - PROTECTED_FD_START) - 1;
+  snprintf(protectedFdBaseBuf, sizeof protectedFdBaseBuf, "%u", base);
+  setenv("DMTCP_PROTECTED_FD_BASE", protectedFdBaseBuf, 1);
 }
 
 int main(int argc, char *argv[])
 {
-  int connfd = 0;
-  struct sockaddr_in serv_addr;
+  // 0 is read
+  // 1 is write
+  int debugPipe[2];
 
-  memset(&serv_addr, '0', sizeof(serv_addr));
-  serv_addr.sin_family = AF_INET;
-  serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  serv_addr.sin_port = htons(31337);
-  
-  if ((listfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-  {
-    printf("listen failed\n");
-    exit(0);
-  }
-  int reuse = 1;
-  setsockopt(listfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
-  
-  if (bind(listfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0)
-  {
-    printf("bind failed\n");
-    close(listfd);
-    exit(0);
-  }
-  
-  serial_printf("listening\n");
-  listen(listfd, 1);
+  setProtectedFdBase();
+  socketpair(AF_UNIX, SOCK_STREAM, 0, debugPipe);
 
-  // now that the socket is ready, go ahead and fork
-  fork_and_call(argc, argv);
-  while (1)
-  {
-    pid_t pid;
-    connfd = accept(listfd, (struct sockaddr*)NULL, NULL); 
-    
-    pid = fork();
-    if (pid == 0)
-    {
-      proxy(connfd);
-      close(connfd);
-      exit(0);
-    }
+  pid_t pid = fork();
+  if (pid > 0) {
+    int status;
+    close(debugPipe[1]);
+    proxy(debugPipe[0]);
+    waitpid(pid, &status, 0);
+  } else if (pid == 0) {
+    close(debugPipe[0]);
+    assert(dup2(debugPipe[1], PROTECTED_MPI_PROXY_FD) ==
+           PROTECTED_MPI_PROXY_FD);
+    close(debugPipe[1]);
+    launch_or_restart(pid, argc, argv);
+  } else {
+    assert(0);
   }
-  close(listfd);
+
   return 0;
 }
-
-
