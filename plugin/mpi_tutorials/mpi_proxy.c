@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
@@ -76,12 +77,37 @@ DONE:
   return;
 }
 
+void fork_and_call(int argc, char *argv[])
+{
+  int pid = fork();
+  int i = 0;
+  if (pid == 0)
+  {
+    // child:
+    if (!strcmp(argv[1], "dmtcp_launch"))
+    {
+      // go ahead and exec into provided arglist
+      execvp(argv[1], &argv[1]);
+    }
+    else if (!strcmp(argv[1], "dmtcp_restart"))
+    {
+      //execvp("dmtcp_restart", &argv[2]);
+    }
+    else
+    {
+      printf("ERROR - NOT A LAUNCH OR RESUME\n");
+    }
+    exit(1);
+  }
+  exit(0);
+  return;
+}
 
 int main(int argc, char *argv[])
 {
   int connfd = 0;
   struct sockaddr_in serv_addr;
-  
+
   memset(&serv_addr, '0', sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -104,6 +130,9 @@ int main(int argc, char *argv[])
   
   serial_printf("listening\n");
   listen(listfd, 1);
+
+  // now that the socket is ready, go ahead and fork
+  fork_and_call(argc, argv);
   while (1)
   {
     pid_t pid;

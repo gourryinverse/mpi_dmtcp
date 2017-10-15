@@ -28,7 +28,6 @@ int serial_printf(char * msg)
 int exec_proxy_cmd(int pcmd)
 {
   int answer = 0;
-  DMTCP_PLUGIN_DISABLE_CKPT();
   serial_printf("PLUGIN: Sending Proxy Command\n");
   printf("Socket: %08x\n", sockfd);
   fflush(stdout);
@@ -38,7 +37,6 @@ int exec_proxy_cmd(int pcmd)
     serial_printf("****** ERROR READING FROM SOCKET *****\n");
   else
     serial_printf("Answer Received\n");
-  DMTCP_PLUGIN_ENABLE_CKPT();
   return answer;
 }
 
@@ -122,12 +120,16 @@ void dmtcp_event_hook(DmtcpEvent_t event, DmtcpEventData_t *data)
     break;
   case DMTCP_EVENT_RESTART:
     serial_printf("*** DMTCP_EVENT_RESTART\n");
-    init_proxy();
     break;
   case DMTCP_EVENT_THREADS_SUSPEND:
     serial_printf("*** DMTCP_EVENT_THREADS_SUSPEND\n");
     close_proxy();
     break;
+  case DMTCP_EVENT_REFILL:
+    close_proxy();
+    init_proxy();
+    serial_printf("*** DMTCP_EVENT_EVENT_REFILL\n");
+		break;
   case DMTCP_EVENT_WRITE_CKPT:
     serial_printf("*** DMTCP_EVENT_WRITE_CKPT\n");
     break;
@@ -135,6 +137,25 @@ void dmtcp_event_hook(DmtcpEvent_t event, DmtcpEventData_t *data)
     serial_printf("*** DMTCP_EVENT_EXIT\n");
     close_proxy();
     break;
+  case DMTCP_EVENT_PRE_EXEC:
+  case DMTCP_EVENT_POST_EXEC:
+  case DMTCP_EVENT_ATFORK_PREPARE:
+  case DMTCP_EVENT_ATFORK_PARENT:
+  case DMTCP_EVENT_ATFORK_CHILD:
+  case DMTCP_EVENT_WAIT_FOR_SUSPEND_MSG:
+  case DMTCP_EVENT_LEADER_ELECTION:
+  case DMTCP_EVENT_DRAIN:
+  case DMTCP_EVENT_REGISTER_NAME_SERVICE_DATA:
+  case DMTCP_EVENT_SEND_QUERIES:
+  case DMTCP_EVENT_THREADS_RESUME:
+  case DMTCP_EVENT_PRE_SUSPEND_USER_THREAD:
+  case DMTCP_EVENT_RESUME_USER_THREAD:
+  case DMTCP_EVENT_THREAD_START:
+  case DMTCP_EVENT_THREAD_CREATED:
+  case DMTCP_EVENT_PTHREAD_START:
+  case DMTCP_EVENT_PTHREAD_RETURN:
+		printf("**** EVENT: %d\n ***", event);
+		fflush(stdout);
   default:
     break;
   }
