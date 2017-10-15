@@ -10,8 +10,8 @@
 #include <mpi.h>
 #include "mpi_proxy.h"
 #include "dmtcp.h"
+#include "protectedfds.h"
 
-int sockfd;
 int replay_commands[1024];
 int replay_count = 0;
 int proxy_started = 0;
@@ -29,14 +29,19 @@ int exec_proxy_cmd(int pcmd)
 {
   int answer = 0;
   serial_printf("PLUGIN: Sending Proxy Command\n");
-  printf("Socket: %08x\n", sockfd);
   fflush(stdout);
-  write(sockfd, &pcmd, 4);
+  if (write(PROTECTED_MPI_PROXY_FD, &pcmd, 4) < 0) {
+    perror("PLUGIN: read error");
+    serial_printf("****** ERROR WRITING TO SOCKET *****\n");
+  }
   serial_printf("PLUGIN: Receiving Proxy Answer - ");
-  if (read(sockfd, &answer, 4) < 0)
+  if (read(PROTECTED_MPI_PROXY_FD, &answer, 4) < 0) {
+    perror("PLUGIN: read error");
     serial_printf("****** ERROR READING FROM SOCKET *****\n");
-  else
+  }
+  else {
     serial_printf("Answer Received\n");
+  }
   return answer;
 }
 
@@ -45,25 +50,11 @@ int exec_proxy_cmd(int pcmd)
 void init_proxy()
 {
   int i = 0;
-  struct sockaddr_in serv_addr;
   
   if (proxy_started)
     return;
   
   serial_printf("PLUGIN: Initialize Proxy Connection\n");
-
-  memset(&serv_addr, '0', sizeof(serv_addr));
-  serv_addr.sin_family = AF_INET;
-  serv_addr.sin_port = htons(31337);
-  inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr);
-  if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-  {
-    serial_printf("SOCKET FAILURE\n");
-  }
-  if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-  {
-    serial_printf("CONNECT FAILURE\n");
-  }
 
   for (i = 0; i < replay_count; i++)
   {
@@ -82,7 +73,6 @@ void close_proxy(void)
   serial_printf("PLUGIN: Close Proxy Connection\n");
   exec_proxy_cmd(MPIProxy_Cmd_Shutdown_Proxy);
   proxy_started = 0;
-  close(sockfd);
 }
 
 void add_replay_command(int pcmd)
@@ -116,18 +106,20 @@ void dmtcp_event_hook(DmtcpEvent_t event, DmtcpEventData_t *data)
     break;
   case DMTCP_EVENT_RESUME:
     serial_printf("*** DMTCP_EVENT_RESUME\n");
-    init_proxy();
+    break;
+  case DMTCP_EVENT_THREADS_RESUME:
+    serial_printf("*** DMTCP_EVENT_THREADS_RESUME\n");
+    if (data->resumeInfo.isRestart) {
+      init_proxy();
+    }
     break;
   case DMTCP_EVENT_RESTART:
     serial_printf("*** DMTCP_EVENT_RESTART\n");
     break;
   case DMTCP_EVENT_THREADS_SUSPEND:
     serial_printf("*** DMTCP_EVENT_THREADS_SUSPEND\n");
-    close_proxy();
     break;
   case DMTCP_EVENT_REFILL:
-    close_proxy();
-    init_proxy();
     serial_printf("*** DMTCP_EVENT_EVENT_REFILL\n");
 		break;
   case DMTCP_EVENT_WRITE_CKPT:
@@ -147,14 +139,13 @@ void dmtcp_event_hook(DmtcpEvent_t event, DmtcpEventData_t *data)
   case DMTCP_EVENT_DRAIN:
   case DMTCP_EVENT_REGISTER_NAME_SERVICE_DATA:
   case DMTCP_EVENT_SEND_QUERIES:
-  case DMTCP_EVENT_THREADS_RESUME:
   case DMTCP_EVENT_PRE_SUSPEND_USER_THREAD:
   case DMTCP_EVENT_RESUME_USER_THREAD:
   case DMTCP_EVENT_THREAD_START:
   case DMTCP_EVENT_THREAD_CREATED:
   case DMTCP_EVENT_PTHREAD_START:
   case DMTCP_EVENT_PTHREAD_RETURN:
-		printf("**** EVENT: %d\n ***", event);
+		//printf("**** EVENT: %d\n ***", event);
 		fflush(stdout);
   default:
     break;
