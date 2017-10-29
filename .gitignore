@@ -1,0 +1,7 @@
+
+*.swp
+*.so
+*.o
+mpi_proxy
+errors.txt
+*.dmtcp

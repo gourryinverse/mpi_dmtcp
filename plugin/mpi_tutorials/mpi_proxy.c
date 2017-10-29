@@ -49,9 +49,6 @@ void MPIProxy_Finalize(int connfd)
 
 void proxy(int connfd)
 {
-  // TODO get instruction
-  // TODO Communication mechanism
-  // TODO dispatch
   int init = 0;
   int cmd = 0;
   while (1)

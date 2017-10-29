@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
@@ -47,11 +48,11 @@ int exec_proxy_cmd(int pcmd)
 
 
 // Proxy Setup
-void init_proxy()
+void init_proxy(bool restart)
 {
   int i = 0;
   
-  if (proxy_started)
+  if (proxy_started && !restart)
     return;
   
   serial_printf("PLUGIN: Initialize Proxy Connection\n");
@@ -102,7 +103,7 @@ void dmtcp_event_hook(DmtcpEvent_t event, DmtcpEventData_t *data)
   switch (event) {
   case DMTCP_EVENT_INIT:
     serial_printf("*** DMTCP_EVENT_INIT\n");
-    init_proxy();
+    init_proxy(false);
     break;
   case DMTCP_EVENT_RESUME:
     serial_printf("*** DMTCP_EVENT_RESUME\n");
@@ -110,7 +111,7 @@ void dmtcp_event_hook(DmtcpEvent_t event, DmtcpEventData_t *data)
   case DMTCP_EVENT_THREADS_RESUME:
     serial_printf("*** DMTCP_EVENT_THREADS_RESUME\n");
     if (data->resumeInfo.isRestart) {
-      init_proxy();
+      init_proxy(true);
     }
     break;
   case DMTCP_EVENT_RESTART:
