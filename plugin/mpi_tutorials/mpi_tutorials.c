@@ -13,7 +13,7 @@
 #include "dmtcp.h"
 #include "protectedfds.h"
 
-//#define SDEBUG
+#define SDEBUG
 
 struct VirtualMPIInfo
 {
