@@ -14,15 +14,36 @@
 #include <sys/resource.h>
 #include "mpi_proxy.h"
 #include <mpi.h>
-
+#include <map>
 #include "protectedfds.h"
 
 int listfd = 0;
+
+std::map<int,int> vranks;
+int my_vrank = 0;
+int my_vsize = 0;
+int my_rsize = 0;
 
 int serial_printf(char * msg)
 {
   printf("%s", msg);
   fflush(stdout);
+}
+
+int MPIProxy_Receive_Arg_Int(int connfd)
+{
+  int retval;
+  int status;
+  status = read(connfd, &retval, sizeof(int));
+  // TODO: error check
+  return retval;
+}
+
+int MPIProxy_Send_Arg_Int(int connfd, int arg)
+{
+  int status = write(connfd, &arg, sizeof(int));
+  // TODO: error check
+  return status;
 }
 
 void MPIProxy_Return_Answer(int connfd, int answer)
@@ -38,6 +59,50 @@ void MPIProxy_Init(int connfd)
   // TODO: Get argc and argv
   serial_printf("PROXY: MPI_Init - ");
   MPIProxy_Return_Answer(connfd, MPI_Init(NULL, NULL));
+}
+
+void MPIProxy_Get_CommSize(int connfd)
+{
+  int group = 0;
+  int commsize = 0;
+  int retval = 0;
+  group = MPIProxy_Receive_Arg_Int(connfd);
+  retval = MPI_Comm_size(group, &commsize);
+  MPIProxy_Return_Answer(connfd, retval);
+  if (!retval)
+    MPIProxy_Send_Arg_Int(connfd, commsize);
+}
+
+void MPIProxy_Get_CommRank(int connfd)
+{
+  int group = 0;
+  int commrank = 0;
+  int retval = 0;
+
+  group = MPIProxy_Receive_Arg_Int(connfd);
+
+  if (vranks.size() == 0)
+  {
+    // mapping hasn't been done, this is a launch
+    retval = MPI_Comm_rank(group, &commrank);
+    MPIProxy_Return_Answer(connfd, retval);
+    if (!retval)
+      MPIProxy_Send_Arg_Int(connfd, commrank);
+  }
+  else
+  {
+    MPIProxy_Return_Answer(connfd, 0);
+    MPIProxy_Send_Arg_Int(connfd, my_vrank);
+  }
+}
+
+void MPIProxy_Set_CommRank(int connfd)
+{
+  int real;
+  my_vrank = MPIProxy_Receive_Arg_Int(connfd);
+  MPI_Comm_rank(MPI_COMM_WORLD, &real);
+  vranks[my_vrank] = real;
+  MPIProxy_Return_Answer(connfd, 0);
 }
 
 void MPIProxy_Finalize(int connfd)
@@ -62,9 +127,23 @@ void proxy(int connfd)
     switch (cmd)
     {
     case MPIProxy_Cmd_Init:
+      serial_printf("PROXY(INIT) ");
       MPIProxy_Init(connfd);
       break;
+    case MPIProxy_Cmd_Get_CommSize:
+      serial_printf("PROXY(Get_CommSize) ");
+      MPIProxy_Get_CommSize(connfd);
+      break;
+    case MPIProxy_Cmd_Get_CommRank:
+      serial_printf("PROXY(Get_CommRank)");
+      MPIProxy_Get_CommRank(connfd);
+      break;
+    case MPIProxy_Cmd_Set_CommRank:
+      serial_printf("PROXY(Set_CommRank)");
+      MPIProxy_Set_CommRank(connfd);
+      break;
     case MPIProxy_Cmd_Finalize:
+      serial_printf("PROXY(Finalize)");
       MPIProxy_Finalize(connfd);
       break;
     case MPIProxy_Cmd_Shutdown_Proxy:

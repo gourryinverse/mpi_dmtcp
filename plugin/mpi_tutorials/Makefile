@@ -1,6 +1,6 @@
 # To demonstrate, do:  make check    [Checkpoints every 5 seconds]
 
-MPICC = mpicc
+MPICC = mpic++
 
 # The name will be the same as the current directory name.
 NAME=${shell basename $$PWD}
